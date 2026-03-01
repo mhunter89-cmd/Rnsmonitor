@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RNS Portfolio Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #191d25;
+    --border: #1e2330;
+    --border2: #2a3045;
+    --accent: #4f8ef7;
+    --accent2: #7dd3fc;
+    --gold: #f0b429;
+    --green: #34d399;
+    --red: #f87171;
+    --purple: #a78bfa;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --muted2: #9ca3af;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px; left: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(79,142,247,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -200px; right: -200px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(167,139,250,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .app {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .brand h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .brand h1 span { color: var(--accent); }
+  .brand p {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+  .date-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted2);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 6px;
+  }
+
+  /* Tip */
+  .tip-banner {
+    background: rgba(79,142,247,0.07);
+    border: 1px solid rgba(79,142,247,0.2);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 32px;
+    display: flex;
+    gap: 12px;
+    font-size: 0.84rem;
+    color: var(--muted2);
+    line-height: 1.6;
+  }
+  .tip-banner strong { color: var(--accent2); }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.63rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  /* Ticker input */
+  .ticker-input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .ticker-input-row input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .ticker-input-row input:focus { border-color: var(--accent); }
+  .ticker-input-row input::placeholder { color: var(--muted); text-transform: none; letter-spacing: 0; }
+  .btn-add {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted2);
+    border-radius: 8px;
+    padding: 11px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-add:hover { border-color: var(--border2); color: var(--text); }
+
+  /* Tickers */
+  .tickers-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 38px;
+    margin-bottom: 24px;
+  }
+  .ticker-tag {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--accent2);
+    animation: tagIn 0.2s ease;
+  }
+  @keyframes tagIn { from { opacity:0;transform:scale(0.9); } to { opacity:1;transform:scale(1); } }
+  .ticker-tag button {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 1rem; line-height: 1; padding: 0;
+    transition: color 0.15s;
+  }
+  .ticker-tag button:hover { color: var(--red); }
+  .empty-portfolio {
+    width: 100%;
+    padding: 18px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+
+  hr.divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+  /* Filters */
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+  .filter-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 0.78rem;
+    color: var(--muted2);
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .filter-chip.active { border-color: var(--accent); background: rgba(79,142,247,0.1); color: var(--accent2); }
+  .filter-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  /* Run btn */
+  .btn-run {
+    width: 100%;
+    padding: 14px;
+    font-size: 0.95rem;
+    background: linear-gradient(135deg, var(--accent) 0%, #6366f1 100%);
+    color: #fff;
+    border-radius: 10px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+  .btn-run:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(79,142,247,0.3); }
+  .btn-run:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Results */
+  .results-section { margin-top: 44px; }
+  .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .results-header h2 { font-family: 'DM Serif Display', serif; font-size: 1.4rem; }
+  .results-meta { font-size: 0.72rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  /* Copy CTA */
+  .copy-cta {
+    background: var(--surface);
+    border: 1px solid rgba(52,211,153,0.25);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .copy-cta-text h3 { font-size: 0.93rem; font-weight: 600; margin-bottom: 4px; }
+  .copy-cta-text p { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+  .btn-copy {
+    background: linear-gradient(135deg, #059669 0%, var(--green) 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 22px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.87rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .btn-copy:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(52,211,153,0.3); }
+  .btn-copy.copied { background: linear-gradient(135deg, var(--accent) 0%, #6366f1 100%); }
+
+  /* Stock cards */
+  .stock-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    animation: cardIn 0.35s ease both;
+  }
+  @keyframes cardIn { from { opacity:0;transform:translateY(10px); } to { opacity:1;transform:translateY(0); } }
+
+  .stock-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-bottom: 1px solid transparent;
+  }
+  .stock-card-header:hover { background: var(--surface2); }
+  .stock-card-header.is-open { border-bottom-color: var(--border); }
+
+  .stock-info { display: flex; align-items: center; gap: 14px; }
+  .ticker-bubble {
+    background: rgba(79,142,247,0.15);
+    border: 1px solid rgba(79,142,247,0.3);
+    color: var(--accent2);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 6px;
+    letter-spacing: 0.06em;
+  }
+  .stock-name { font-size: 0.93rem; font-weight: 500; }
+  .rns-count { font-size: 0.7rem; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+
+  .card-right { display: flex; align-items: center; gap: 10px; }
+  .count-pill {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-family: 'DM Mono', monospace;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .count-pill.active { background: rgba(79,142,247,0.1); border-color: rgba(79,142,247,0.35); color: var(--accent2); }
+  .chevron { color: var(--muted); transition: transform 0.25s; font-size: 0.75rem; }
+  .chevron.open { transform: rotate(180deg); }
+
+  .stock-card-body { display: none; padding: 20px; }
+  .stock-card-body.open { display: block; }
+
+  /* RNS items */
+  .rns-list { display: flex; flex-direction: column; gap: 10px; }
+  .rns-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 13px 15px;
+  }
+  .rns-item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 7px; }
+  .rns-title { font-size: 0.87rem; font-weight: 500; line-height: 1.4; }
+  .rns-cat {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .cat-financial { background: rgba(79,142,247,0.15); color: var(--accent); }
+  .cat-director { background: rgba(167,139,250,0.15); color: var(--purple); }
+  .cat-contract { background: rgba(52,211,153,0.15); color: var(--green); }
+  .cat-regulatory { background: rgba(240,180,41,0.15); color: var(--gold); }
+  .cat-other { background: rgba(107,114,128,0.1); color: var(--muted2); }
+
+  .rns-item-bottom { display: flex; align-items: center; justify-content: space-between; }
+  .rns-time { font-size: 0.69rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .rns-link { font-size: 0.69rem; color: var(--accent); text-decoration: none; opacity: 0.7; transition: opacity 0.15s; }
+  .rns-link:hover { opacity: 1; }
+
+  .empty-state { padding: 20px; text-align: center; color: var(--muted); font-size: 0.83rem; }
+  .error-state {
+    padding: 12px 14px;
+    background: rgba(248,113,113,0.07);
+    border: 1px solid rgba(248,113,113,0.2);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    color: var(--red);
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface) 0%, var(--surface2) 50%, var(--surface) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 12px;
+    height: 62px;
+    margin-bottom: 12px;
+  }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="brand">
+      <h1>RNS<span>.</span>Monitor</h1>
+      <p>Regulatory News Intelligence</p>
+    </div>
+    <div class="date-badge" id="dateBadge"></div>
+  </header>
+
+  <div class="tip-banner">
+    <span style="font-size:1.1rem;flex-shrink:0">💡</span>
+    <div><strong>How it works:</strong> Add your tickers below and fetch today's RNS announcements. Then hit <strong>Copy for Claude</strong> and paste it into your Claude chat — you'll get a full per-stock AI briefing instantly, no API key needed.</div>
+  </div>
+
+  <div class="section-label">Your Portfolio</div>
+  <div class="ticker-input-row">
+    <input type="text" id="tickerInput" placeholder="Enter ticker e.g. AZN, HSBA, LGEN, BP" maxlength="10" />
+    <button class="btn-add" onclick="addTicker()">+ Add</button>
+  </div>
+  <div id="tickersContainer" class="tickers-grid"></div>
+
+  <hr class="divider">
+
+  <div class="section-label">RNS Categories to Monitor</div>
+  <div class="filters">
+    <div class="filter-chip active" data-filter="financial" onclick="toggleFilter(this)"><div class="dot"></div>Financial Results</div>
+    <div class="filter-chip active" data-filter="director" onclick="toggleFilter(this)"><div class="dot"></div>Director Dealings</div>
+    <div class="filter-chip active" data-filter="contract" onclick="toggleFilter(this)"><div class="dot"></div>Major Contracts</div>
+    <div class="filter-chip active" data-filter="regulatory" onclick="toggleFilter(this)"><div class="dot"></div>Regulatory Updates</div>
+  </div>
+
+  <button class="btn-run" id="runBtn" onclick="runFetch()">Fetch Today's RNS Announcements</button>
+
+  <!-- Results -->
+  <div class="results-section" id="resultsSection" style="display:none">
+    <div class="results-header">
+      <h2>Today's Announcements</h2>
+      <div class="results-meta" id="resultsMeta"></div>
+    </div>
+
+    <div class="copy-cta">
+      <div class="copy-cta-text">
+        <h3>📋 Get Your AI Daily Briefing</h3>
+        <p>Copy all announcements and paste into Claude for a detailed per-stock analysis — signals, takeaways, and what to watch next.</p>
+      </div>
+      <button class="btn-copy" id="copyBtn" onclick="copyForClaude()">Copy for Claude →</button>
+    </div>
+
+    <div id="resultsContainer"></div>
+  </div>
+
+</div>
+<script>
+let tickers = [];
+let activeFilters = new Set(['financial','director','contract','regulatory']);
+let fetchedData = [];
+
+document.getElementById('dateBadge').textContent = new Date().toLocaleDateString('en-GB', {
+  weekday:'short', day:'numeric', month:'long', year:'numeric'
+});
+
+document.getElementById('tickerInput').addEventListener('keydown', e => { if (e.key === 'Enter') addTicker(); });
+
+function addTicker() {
+  const input = document.getElementById('tickerInput');
+  const val = input.value.trim().toUpperCase().replace(/[^A-Z0-9.]/g,'');
+  if (!val || tickers.includes(val)) { input.value=''; return; }
+  tickers.push(val);
+  input.value='';
+  renderTickers();
+}
+
+function removeTicker(t) {
+  tickers = tickers.filter(x => x !== t);
+  renderTickers();
+}
+
+function renderTickers() {
+  const el = document.getElementById('tickersContainer');
+  if (!tickers.length) {
+    el.innerHTML = '<div class="empty-portfolio">No stocks added yet — enter a ticker above and press Enter or click Add</div>';
+    return;
+  }
+  el.innerHTML = tickers.map(t => `
+    <div class="ticker-tag">${t}<button onclick="removeTicker('${t}')" title="Remove">×</button></div>
+  `).join('');
+}
+renderTickers();
+
+function toggleFilter(el) {
+  const f = el.dataset.filter;
+  if (activeFilters.has(f)) { activeFilters.delete(f); el.classList.remove('active'); }
+  else { activeFilters.add(f); el.classList.add('active'); }
+}
+
+function categorise(text) {
+  const t = text.toLowerCase();
+  if (/result|profit|revenue|earnings|turnover|dividend|interim|annual|half.year|full.year|trading update|ebit|eps|prelim/.test(t)) return 'financial';
+  if (/director|pdmr|dealing|shareholding|purchase of shares|acquisition of shares|tr-1|interest in shares/.test(t)) return 'director';
+  if (/contract|award|order|partnership|agreement|win|client|customer|deal|secured/.test(t)) return 'contract';
+  if (/regulatory|fca|sec|compli|approval|licen|investigation|fine|sanction|authoris/.test(t)) return 'regulatory';
+  return 'other';
+}
+
+async function fetchRNS(ticker) {
+  const url = `https://corsproxy.io/?url=${encodeURIComponent('https://www.investegate.co.uk/rss.aspx?company='+ticker)}`;
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(9000) });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const text = await r.text();
+    const xml = new DOMParser().parseFromString(text, 'application/xml');
+    if (xml.querySelector('parsererror')) throw new Error('Invalid XML');
+    const items = Array.from(xml.querySelectorAll('item')).slice(0,20).map(item => {
+      const title = item.querySelector('title')?.textContent?.trim() || '';
+      const pubDate = item.querySelector('pubDate')?.textContent?.trim() || '';
+      const link = item.querySelector('link')?.textContent?.trim() || '';
+      const desc = item.querySelector('description')?.textContent?.trim() || '';
+      return { title, pubDate, link, description: desc, category: categorise(title+' '+desc) };
+    }).filter(a => activeFilters.has(a.category) || a.category === 'other');
+    return { ticker, announcements: items, error: null };
+  } catch(e) {
+    return { ticker, announcements: [], error: 'Unable to fetch RNS data. The feed may be temporarily unavailable — please try again shortly.' };
+  }
+}
+
+async function runFetch() {
+  if (!tickers.length) { alert('Please add at least one stock ticker first.'); return; }
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Fetching RNS data…';
+
+  const section = document.getElementById('resultsSection');
+  const container = document.getElementById('resultsContainer');
+  const meta = document.getElementById('resultsMeta');
+
+  section.style.display = 'block';
+  container.innerHTML = tickers.map(() => '<div class="skeleton"></div>').join('');
+
+  const t0 = Date.now();
+  fetchedData = await Promise.all(tickers.map(t => fetchRNS(t)));
+  const elapsed = ((Date.now()-t0)/1000).toFixed(1);
+  const total = fetchedData.reduce((s,r) => s+r.announcements.length, 0);
+
+  meta.textContent = `${tickers.length} stock${tickers.length>1?'s':''} · ${total} announcements · ${elapsed}s`;
+  container.innerHTML = fetchedData.map((r,i) => renderCard(r,i)).join('');
+
+  // Auto-open first card
+  const first = container.querySelector('.stock-card-header');
+  if (first) toggleCard(first);
+
+  btn.disabled = false;
+  btn.textContent = '↻ Refresh RNS Data';
+}
+
+const catLabel = { financial:'Financial', director:'Director Dealings', contract:'Contract', regulatory:'Regulatory', other:'General' };
+const catClass = { financial:'cat-financial', director:'cat-director', contract:'cat-contract', regulatory:'cat-regulatory', other:'cat-other' };
+const catLabelFull = { financial:'Financial Results', director:'Director Dealings', contract:'Major Contract/Deal', regulatory:'Regulatory Update', other:'General' };
+
+function renderCard(r, idx) {
+  const has = r.announcements.length > 0;
+  let body;
+  if (r.error) {
+    body = `<div class="error-state">⚠ ${esc(r.error)}</div>`;
+  } else if (!has) {
+    body = `<div class="empty-state">No RNS announcements found for <strong>${r.ticker}</strong> today matching your selected filters. Markets may be closed or no news has been published.</div>`;
+  } else {
+    body = `<div class="rns-list">${r.announcements.map(a => `
+      <div class="rns-item">
+        <div class="rns-item-top">
+          <div class="rns-title">${esc(a.title)}</div>
+          <span class="rns-cat ${catClass[a.category]||'cat-other'}">${catLabel[a.category]||'General'}</span>
+        </div>
+        <div class="rns-item-bottom">
+          <div class="rns-time">${fmtDate(a.pubDate)}</div>
+          ${a.link ? `<a class="rns-link" href="${esc(a.link)}" target="_blank" rel="noopener">View RNS ↗</a>` : ''}
+        </div>
+      </div>`).join('')}</div>`;
+  }
+
+  return `
+    <div class="stock-card" style="animation-delay:${idx*0.07}s">
+      <div class="stock-card-header" onclick="toggleCard(this)">
+        <div class="stock-info">
+          <div class="ticker-bubble">${r.ticker}</div>
+          <div>
+            <div class="stock-name">${r.ticker}</div>
+            <div class="rns-count">${r.error ? 'Fetch error' : `${r.announcements.length} announcement${r.announcements.length!==1?'s':''}`}</div>
+          </div>
+        </div>
+        <div class="card-right">
+          <span class="count-pill ${has?'active':''}">${has ? r.announcements.length+' RNS' : 'Quiet'}</span>
+          <span class="chevron">▾</span>
+        </div>
+      </div>
+      <div class="stock-card-body">${body}</div>
+    </div>`;
+}
+
+function toggleCard(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.chevron');
+  const open = body.classList.contains('open');
+  body.classList.toggle('open', !open);
+  chevron.classList.toggle('open', !open);
+  header.classList.toggle('is-open', !open);
+}
+
+function copyForClaude() {
+  if (!fetchedData.length) return;
+  const today = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  let text = `Please analyse the following RNS announcements from my stock portfolio and give me a detailed daily briefing. For each stock provide:
+- Overall signal: POSITIVE / NEUTRAL / NEGATIVE / WATCHING
+- 3–4 key takeaways from today's announcements
+- What this means for me as an investor and what to watch next
+- Any notable figures, names, or specific details worth highlighting
+
+If a stock has no announcements, note it's been quiet today.
+
+---
+📅 RNS PORTFOLIO UPDATE — ${today}
+---
+`;
+  fetchedData.forEach(r => {
+    text += `\n## ${r.ticker}\n`;
+    if (r.error) {
+      text += `⚠ Data unavailable: ${r.error}\n`;
+    } else if (!r.announcements.length) {
+      text += `No RNS announcements found today.\n`;
+    } else {
+      r.announcements.forEach((a,i) => {
+        text += `\n${i+1}. [${catLabelFull[a.category]||'General'}] ${a.title}\n`;
+        if (a.pubDate) text += `   Published: ${fmtDate(a.pubDate)}\n`;
+        if (a.description && a.description.length > 10) {
+          const clean = a.description.replace(/<[^>]+>/g,'').substring(0,300).trim();
+          if (clean) text += `   Details: ${clean}\n`;
+        }
+      });
+    }
+    text += '\n';
+  });
+  text += '\n---\nPlease provide your briefing stock by stock.';
+
+  navigator.clipboard.writeText(text).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }).finally(() => {});
+
+  // Optimistically update button
+  const btn = document.getElementById('copyBtn');
+  btn.textContent = '✓ Copied! Paste into Claude';
+  btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = 'Copy for Claude →'; btn.classList.remove('copied'); }, 3500);
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  try { return new Date(d).toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }); }
+  catch { return d; }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
